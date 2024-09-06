@@ -3,6 +3,10 @@ using PdfToInp;
 using iTextSharp.text.pdf;
 using System.Text;
 using System;
+using System.IO;
+using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
 
 bool exitRequested = false;
 
@@ -21,7 +25,7 @@ while (!exitRequested)
 	CancellationToken cancellationToken = cancellationTokenSource.Token;
 
 	// Start monitoring and input listening in separate threads
-	Thread monitorThread = new(() => MonitorDirectory(directoryPath, cancellationToken));
+	Thread monitorThread = new(() => MonitorDirectory(directoryPath, outputPath, cancellationToken));
 	Thread inputThread = new(() => ListenForRestartOrQuit(cancellationTokenSource));
 
 	monitorThread.Start();
@@ -68,14 +72,13 @@ static string GetValidDirectoryPath(string prompt, string defaultPath)
 			Console.WriteLine("Ju lutem shkruani një drejtori të vlefshme.");
 			input = defaultPath;
 		}
-
 	} while (true);
 
 	return input;
 }
 
 // Monitoring directory logic
-static void MonitorDirectory(string directoryPath, CancellationToken cancellationToken)
+static void MonitorDirectory(string directoryPath, string outputPath, CancellationToken cancellationToken)
 {
 	while (!cancellationToken.IsCancellationRequested)
 	{
@@ -90,7 +93,7 @@ static void MonitorDirectory(string directoryPath, CancellationToken cancellatio
 
 				string fileName = System.IO.Path.GetFileNameWithoutExtension(pdfFile);
 				string uniqueFileName = $"{fileName}_{Guid.NewGuid()}.inp";
-				string inpFilePath = System.IO.Path.Combine(System.IO.Path.GetDirectoryName(pdfFile), uniqueFileName);
+				string inpFilePath = System.IO.Path.Combine(outputPath, uniqueFileName);
 				SaveOrderItemsToFile(inpFilePath, orderItems);
 
 				// Delete the original PDF file after processing
@@ -142,7 +145,9 @@ static (List<OrderItem>, int) ExtractOrderItemsFromPdf(string pdfFilePath)
 			numberOfPages = reader.NumberOfPages;
 			return (new(), reader.NumberOfPages);
 		}
+
 		var orderId = "";
+
 		for (int i = 1; i <= reader.NumberOfPages; i++)
 		{
 			string pageText = PdfTextExtractor.GetTextFromPage(reader, i);
