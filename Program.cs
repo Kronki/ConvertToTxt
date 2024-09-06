@@ -102,7 +102,8 @@ static void MonitorDirectory(string directoryPath, string outputPath, Cancellati
 
 				// Delete the original PDF file after processing
 				if (pages < 10)
-					File.Delete(pdfFile);
+					if(orderItems.Count > 0)
+						File.Delete(pdfFile);
 			}
 			catch (Exception ex)
 			{
@@ -195,8 +196,11 @@ static void SaveOrderItemsToFile(string filePath, List<OrderItem> orderItems)
 	{
 		content.AppendLine($"S,1,______,_,__;{item.Name};{item.Price};{item.Quantity};1;1;5;0;{rand.Next(100)};0;0;");
 	}
-	content.AppendLine("T,1,______,_,__;0");
+	if(orderItems.Count > 0)
+	{
+		content.AppendLine("T,1,______,_,__;0");
 
-	// Write the content to the file
-	File.WriteAllText(filePath, content.ToString());
+		// Write the content to the file
+		File.WriteAllText(filePath, content.ToString());
+	}
 }
