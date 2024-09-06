@@ -14,11 +14,11 @@ while (!exitRequested)
 {
 	string downloadsDirectoryPath = System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads");
 
-	// Safely get the user input for paths, ensuring that default values are used if no input is provided
-	string directoryPath = GetValidDirectoryPath("Shënoni vendin ku ruhet fatura (ku bëhet download): ", downloadsDirectoryPath);
-	string outputPath = GetValidDirectoryPath("Shënoni vendin ku konvertohet fatura (folderi i printerit): ", System.IO.Path.GetTempPath());
+	// Get user input with a timeout
+	string directoryPath = await GetDirectoryPathWithTimeout("Shënoni vendin ku ruhet fatura (ku bëhet download): ", downloadsDirectoryPath);
+	string outputPath = await GetDirectoryPathWithTimeout("Shënoni vendin ku konvertohet fatura (folderi i printerit): ", System.IO.Path.GetTempPath());
 
-	Console.WriteLine("Monitoring... Shtypni R për të restartuar programin ose Q për të përfunduar.");
+	Console.WriteLine("Duke punuar... Shtypni R për të restartuar programin ose Q për të përfunduar.");
 
 	// Create a cancellation token to stop the monitor thread when needed
 	CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
@@ -47,32 +47,36 @@ while (!exitRequested)
 	}
 }
 
-// Method to safely get a valid directory path from the user
-static string GetValidDirectoryPath(string prompt, string defaultPath)
+// Method to get a directory path with a timeout
+static async Task<string> GetDirectoryPathWithTimeout(string prompt, string defaultPath)
 {
-	string input;
-	do
+	string input = defaultPath;
+
+	var inputTask = Task.Run(() =>
 	{
 		Console.WriteLine(prompt);
 		input = Console.ReadLine();
+	});
 
-		// If the input is null or empty, use the default path
-		if (string.IsNullOrWhiteSpace(input))
+	var timeoutTask = Task.Delay(10000); // 5 seconds timeout
+
+	var completedTask = await Task.WhenAny(inputTask, timeoutTask);
+
+	if (completedTask == inputTask)
+	{
+		// User input received within timeout
+		if (!Directory.Exists(input) && !string.IsNullOrWhiteSpace(input))
 		{
+			Console.WriteLine("Folderi i dhënë nuk është i vlefshëm. Përdorim folderin e përkohshëm.");
 			input = defaultPath;
 		}
-
-		// Check if the input is a valid directory
-		if (Directory.Exists(input))
-		{
-			break; // Valid directory, exit the loop
-		}
-		else
-		{
-			Console.WriteLine("Ju lutem shkruani një drejtori të vlefshme.");
-			input = defaultPath;
-		}
-	} while (true);
+	}
+	else
+	{
+		// Timeout occurred
+		Console.WriteLine("Koha e skaduar për input. Përdorim folderin default(Downloads ose Temp).");
+		input = defaultPath;
+	}
 
 	return input;
 }
