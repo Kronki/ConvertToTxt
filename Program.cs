@@ -2,20 +2,17 @@
 using PdfToInp;
 using iTextSharp.text.pdf;
 using System.Text;
+using System;
 
 bool exitRequested = false;
 
 while (!exitRequested)
 {
-	// Safely get the user input for paths, ensuring that no looping or restart happens prematurely
-	string directoryPath = GetValidDirectoryPath("Shënoni vendin ku ruhet fatura(ku bëhet download): ", 1);
-	string outputPath = GetValidDirectoryPath("Shënoni vendin ku konvertohet fatura(folderi i printerit): ", 2);
+	string downloadsDirectoryPath = System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads");
 
-	if (string.IsNullOrEmpty(outputPath) || !Directory.Exists(outputPath))
-	{
-		outputPath = System.IO.Path.GetTempPath();
-		Console.WriteLine($"Path invalid or empty. Using temporary directory: {outputPath}");
-	}
+	// Safely get the user input for paths, ensuring that default values are used if no input is provided
+	string directoryPath = GetValidDirectoryPath("Shënoni vendin ku ruhet fatura (ku bëhet download): ", downloadsDirectoryPath);
+	string outputPath = GetValidDirectoryPath("Shënoni vendin ku konvertohet fatura (folderi i printerit): ", System.IO.Path.GetTempPath());
 
 	Console.WriteLine("Monitoring... Shtypni R për të restartuar programin ose Q për të përfunduar.");
 
@@ -47,14 +44,19 @@ while (!exitRequested)
 }
 
 // Method to safely get a valid directory path from the user
-static string GetValidDirectoryPath(string prompt, int promptNumber)
+static string GetValidDirectoryPath(string prompt, string defaultPath)
 {
 	string input;
-	var test = true;
 	do
 	{
 		Console.WriteLine(prompt);
 		input = Console.ReadLine();
+
+		// If the input is null or empty, use the default path
+		if (string.IsNullOrWhiteSpace(input))
+		{
+			input = defaultPath;
+		}
 
 		// Check if the input is a valid directory
 		if (Directory.Exists(input))
@@ -63,12 +65,11 @@ static string GetValidDirectoryPath(string prompt, int promptNumber)
 		}
 		else
 		{
-			input = System.IO.Path.GetTempPath();
-			if(promptNumber == 2)
-			test = false;
+			Console.WriteLine("Ju lutem shkruani një drejtori të vlefshme.");
+			input = defaultPath;
 		}
 
-	} while (test);
+	} while (true);
 
 	return input;
 }
@@ -89,8 +90,8 @@ static void MonitorDirectory(string directoryPath, CancellationToken cancellatio
 
 				string fileName = System.IO.Path.GetFileNameWithoutExtension(pdfFile);
 				string uniqueFileName = $"{fileName}_{Guid.NewGuid()}.inp";
-				string txtFilePath = System.IO.Path.Combine(System.IO.Path.GetDirectoryName(pdfFile), uniqueFileName);
-				SaveOrderItemsToFile(txtFilePath, orderItems);
+				string inpFilePath = System.IO.Path.Combine(System.IO.Path.GetDirectoryName(pdfFile), uniqueFileName);
+				SaveOrderItemsToFile(inpFilePath, orderItems);
 
 				// Delete the original PDF file after processing
 				if (pages < 10)
@@ -141,9 +142,7 @@ static (List<OrderItem>, int) ExtractOrderItemsFromPdf(string pdfFilePath)
 			numberOfPages = reader.NumberOfPages;
 			return (new(), reader.NumberOfPages);
 		}
-
 		var orderId = "";
-
 		for (int i = 1; i <= reader.NumberOfPages; i++)
 		{
 			string pageText = PdfTextExtractor.GetTextFromPage(reader, i);
