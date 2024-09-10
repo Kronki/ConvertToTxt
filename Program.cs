@@ -41,9 +41,7 @@ static void MonitorDirectory(string directoryPath, string outputPath)
             SaveOrderItemsToFile(inpFilePath, orderItems);
 
             // Delete the original PDF file after processing
-            if (pages < 10)
-                if (orderItems.Count > 0)
-                    File.Delete(pdfFile);
+            File.Delete(pdfFile);
         }
         catch (Exception ex)
         {
