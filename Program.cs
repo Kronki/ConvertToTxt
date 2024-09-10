@@ -2,8 +2,6 @@
 using PdfToInp;
 using iTextSharp.text.pdf;
 using System.Text;
-using UglyToad.PdfPig;
-using UglyToad.PdfPig.Content;
 using System.Text.RegularExpressions;
 
 bool exitRequested = false;
@@ -13,6 +11,7 @@ string solutionDirectory = AppContext.BaseDirectory;
 
 // Call the function to print
 Console.WriteLine("HOXXES permes keti aplikacioni ju mundeson printimin e kuponave fiscal");
+Console.WriteLine("\nJu lutem mbani te hapur kete program qe te ju funksionoj printimi i kuponave fiskal!");
 
 while (!exitRequested)
 {
@@ -125,105 +124,5 @@ static void SaveOrderItemsToFile(string filePath, List<OrderItem> orderItems)
 
         // Write the content to the file
         File.WriteAllText(filePath, content.ToString());
-    }
-}
-
-static void MonitorWithPdfPig(string directoryPath, string outputPath)
-{
-    var pdfFiles = Directory.GetFiles(directoryPath, "*.pdf");
-    foreach(var pdfFile in pdfFiles)
-    {
-        using (var document = UglyToad.PdfPig.PdfDocument.Open(pdfFile))
-        {
-            foreach (var page in document.GetPages())
-            {
-                string text = page.Text;
-                Console.WriteLine(text);
-            }
-        }
-    }
-}
-
-static void PrintHoxxesLarge()
-{
-    string[] h = new string[]
-    {
-            "H      H",
-            "H      H",
-            "H      H",
-            "H      H",
-            "H      H",
-            "HHHHHHHH",
-            "H      H",
-            "H      H",
-            "H      H",
-            "H      H",
-            "H      H",
-    };
-
-    string[] o = new string[]
-    {
-            "  OOOOOO  ",
-            " O      O ",
-            "O        O",
-            "O        O",
-            "O        O",
-            "O        O",
-            "O        O",
-            "O        O",
-            "O        O",
-            " O      O ",
-            "  OOOOOO  ",
-    };
-
-    string[] x = new string[]
-    {
-            "X        X",
-            " X      X ",
-            "  X    X  ",
-            "   X  X   ",
-            "    XX    ",
-            "    XX    ",
-            "   X  X   ",
-            "  X    X  ",
-            " X      X ",
-            "X        X",
-            "          ",
-    };
-
-    string[] e = new string[]
-    {
-            "EEEEEEEEEE",
-            "E         ",
-            "E         ",
-            "E         ",
-            "E         ",
-            "EEEEEEEE  ",
-            "E         ",
-            "E         ",
-            "E         ",
-            "E         ",
-            "EEEEEEEEEE",
-    };
-
-    string[] s = new string[]
-    {
-            " SSSSSSSS ",
-            "S        S",
-            "S         ",
-            "S         ",
-            "S         ",
-            " SSSSSSSS ",
-            "         S",
-            "         S",
-            "         S",
-            "S        S",
-            " SSSSSSSS ",
-    };
-
-    // Print each letter's corresponding ASCII art line by line
-    for (int i = 0; i < h.Length; i++)
-    {
-        Console.WriteLine(h[i] + "        " + o[i] + "        " + x[i] + "        " + x[i] + "        " + e[i] + "        " + s[i]);
     }
 }
