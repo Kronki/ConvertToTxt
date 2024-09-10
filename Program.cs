@@ -2,19 +2,22 @@
 using PdfToInp;
 using iTextSharp.text.pdf;
 using System.Text;
-using System;
-using System.Collections.Generic;
-using System.Threading;
+using UglyToad.PdfPig;
+using UglyToad.PdfPig.Content;
+using System.Text.RegularExpressions;
 
 bool exitRequested = false;
 
 // Get the directory of the .sln file (assuming the .sln is in the current working directory)
 string solutionDirectory = AppContext.BaseDirectory;
 
+// Call the function to print
+Console.WriteLine("HOXXES permes keti aplikacioni ju mundeson printimin e kuponave fiscal");
+
 while (!exitRequested)
 {
-    string directoryPath = solutionDirectory;  // Use the solution directory as the input path
-    string outputPath = solutionDirectory;     // Use the solution directory as the output path
+    string directoryPath = solutionDirectory;
+    string outputPath = solutionDirectory;
 
     // Start monitoring the directory
     MonitorDirectory(directoryPath, outputPath);
@@ -45,8 +48,13 @@ static void MonitorDirectory(string directoryPath, string outputPath)
         }
         catch (Exception ex)
         {
-            // Handle any exceptions that occur during processing
-            Console.WriteLine($"Error processing {pdfFile}: {ex.Message}");
+            // Log the exception to a file, grouped by date
+            string logFilePath = System.IO.Path.Combine(outputPath, $"ErrorLog_{DateTime.Now:yyyy-MM-dd}.txt");
+
+            string logMessage = $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] Error processing {pdfFile}: {ex.Message}{Environment.NewLine}";
+
+            // Append the error message to the log file
+            File.AppendAllText(logFilePath, logMessage);
         }
     }
 }
@@ -65,7 +73,6 @@ static (List<OrderItem>, int) ExtractOrderItemsFromPdf(string pdfFilePath)
             return (new(), reader.NumberOfPages);
         }
 
-        var orderId = "";
 
         for (int i = 1; i <= reader.NumberOfPages; i++)
         {
@@ -74,15 +81,17 @@ static (List<OrderItem>, int) ExtractOrderItemsFromPdf(string pdfFilePath)
 
             foreach (string line in lines)
             {
-                // Match lines that contain the order items
-                string[] parts = line.Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
-                if (parts.Length > 1 && parts[1].Contains('#'))
-                    orderId = parts[1];
-                if (parts.Length == 3 && decimal.TryParse(parts[2], out decimal price) && int.TryParse(parts[1], out int quantity))
+                var match = Regex.Match(line, @"^(?<Name>.+?)\s*(?<Quantity>\d+)\s+(?<Price>\d+(\.\d{1,2})?)$");
+
+                if (match.Success)
                 {
+                    string name = match.Groups["Name"].Value.Trim();
+                    int quantity = int.Parse(match.Groups["Quantity"].Value);
+                    decimal price = decimal.Parse(match.Groups["Price"].Value);
+
                     orderItems.Add(new OrderItem
                     {
-                        Name = parts[0],
+                        Name = name,
                         Quantity = quantity,
                         Price = price
                     });
@@ -108,7 +117,7 @@ static void SaveOrderItemsToFile(string filePath, List<OrderItem> orderItems)
     var content = new StringBuilder();
     foreach (var item in orderItems)
     {
-        content.AppendLine($"S,1,______,_,__;{item.Name};{item.Price};{item.Quantity};1;1;5;0;{rand.Next(10000)};0;0;");
+        content.AppendLine($"S,1,______,_,__;{item.Name};{item.Price};{item.Quantity};1;1;5;0;{rand.Next(100000)};0;0;");
     }
     if (orderItems.Count > 0)
     {
@@ -116,5 +125,105 @@ static void SaveOrderItemsToFile(string filePath, List<OrderItem> orderItems)
 
         // Write the content to the file
         File.WriteAllText(filePath, content.ToString());
+    }
+}
+
+static void MonitorWithPdfPig(string directoryPath, string outputPath)
+{
+    var pdfFiles = Directory.GetFiles(directoryPath, "*.pdf");
+    foreach(var pdfFile in pdfFiles)
+    {
+        using (var document = UglyToad.PdfPig.PdfDocument.Open(pdfFile))
+        {
+            foreach (var page in document.GetPages())
+            {
+                string text = page.Text;
+                Console.WriteLine(text);
+            }
+        }
+    }
+}
+
+static void PrintHoxxesLarge()
+{
+    string[] h = new string[]
+    {
+            "H      H",
+            "H      H",
+            "H      H",
+            "H      H",
+            "H      H",
+            "HHHHHHHH",
+            "H      H",
+            "H      H",
+            "H      H",
+            "H      H",
+            "H      H",
+    };
+
+    string[] o = new string[]
+    {
+            "  OOOOOO  ",
+            " O      O ",
+            "O        O",
+            "O        O",
+            "O        O",
+            "O        O",
+            "O        O",
+            "O        O",
+            "O        O",
+            " O      O ",
+            "  OOOOOO  ",
+    };
+
+    string[] x = new string[]
+    {
+            "X        X",
+            " X      X ",
+            "  X    X  ",
+            "   X  X   ",
+            "    XX    ",
+            "    XX    ",
+            "   X  X   ",
+            "  X    X  ",
+            " X      X ",
+            "X        X",
+            "          ",
+    };
+
+    string[] e = new string[]
+    {
+            "EEEEEEEEEE",
+            "E         ",
+            "E         ",
+            "E         ",
+            "E         ",
+            "EEEEEEEE  ",
+            "E         ",
+            "E         ",
+            "E         ",
+            "E         ",
+            "EEEEEEEEEE",
+    };
+
+    string[] s = new string[]
+    {
+            " SSSSSSSS ",
+            "S        S",
+            "S         ",
+            "S         ",
+            "S         ",
+            " SSSSSSSS ",
+            "         S",
+            "         S",
+            "         S",
+            "S        S",
+            " SSSSSSSS ",
+    };
+
+    // Print each letter's corresponding ASCII art line by line
+    for (int i = 0; i < h.Length; i++)
+    {
+        Console.WriteLine(h[i] + "        " + o[i] + "        " + x[i] + "        " + x[i] + "        " + e[i] + "        " + s[i]);
     }
 }
