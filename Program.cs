@@ -108,7 +108,7 @@ static void SaveOrderItemsToFile(string filePath, List<OrderItem> orderItems)
     var content = new StringBuilder();
     foreach (var item in orderItems)
     {
-        content.AppendLine($"S,1,______,_,__;{item.Name};{item.Price};{item.Quantity};1;1;5;0;{rand.Next(100)};0;0;");
+        content.AppendLine($"S,1,______,_,__;{item.Name};{item.Price};{item.Quantity};1;1;5;0;{rand.Next(10000)};0;0;");
     }
     if (orderItems.Count > 0)
     {
