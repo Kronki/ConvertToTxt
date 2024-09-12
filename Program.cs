@@ -28,6 +28,8 @@ while (!exitRequested)
 // Monitoring directory logic
 static void MonitorDirectory(string directoryPath, string outputPath)
 {
+    var itemIdManager = new ItemIdManager(System.IO.Path.Combine(directoryPath, "item_ids.json"));
+
     var pdfFiles = Directory.GetFiles(directoryPath, "*.pdf");
 
     foreach (var pdfFile in pdfFiles)
@@ -40,7 +42,7 @@ static void MonitorDirectory(string directoryPath, string outputPath)
             string fileName = System.IO.Path.GetFileNameWithoutExtension(pdfFile);
             string uniqueFileName = $"{fileName}_{Guid.NewGuid()}.inp";
             string inpFilePath = System.IO.Path.Combine(outputPath, uniqueFileName);
-            SaveOrderItemsToFile(inpFilePath, orderItems);
+            SaveOrderItemsToFile(inpFilePath, orderItems, itemIdManager);
 
             // Delete the original PDF file after processing
             File.Delete(pdfFile);
@@ -57,6 +59,7 @@ static void MonitorDirectory(string directoryPath, string outputPath)
         }
     }
 }
+
 
 // Method to extract order items from a PDF file
 static (List<OrderItem>, int) ExtractOrderItemsFromPdf(string pdfFilePath)
@@ -103,7 +106,7 @@ static (List<OrderItem>, int) ExtractOrderItemsFromPdf(string pdfFilePath)
 }
 
 // Method to save order items to a file
-static void SaveOrderItemsToFile(string filePath, List<OrderItem> orderItems)
+static void SaveOrderItemsToFile(string filePath, List<OrderItem> orderItems, ItemIdManager itemIdManager)
 {
     var rand = new Random();
     // Ensure the file extension is .inp
@@ -116,7 +119,10 @@ static void SaveOrderItemsToFile(string filePath, List<OrderItem> orderItems)
     var content = new StringBuilder();
     foreach (var item in orderItems)
     {
-        content.AppendLine($"S,1,______,_,__;{item.Name};{item.Price};{item.Quantity};1;1;5;0;{rand.Next(100000)};0;0;");
+        var itemId = itemIdManager.GetId(item.Name);
+        var priceDivided = item.Price / item.Quantity;
+        var price = Convert.ToDouble(String.Format("{0:0.00}", priceDivided));
+        content.AppendLine($"S,1,______,_,__;{item.Name};{price};{item.Quantity};1;1;5;0;{itemId};0;0;");
     }
     if (orderItems.Count > 0)
     {
