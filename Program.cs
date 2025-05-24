@@ -83,7 +83,7 @@ static (List<OrderItem>, int) ExtractOrderItemsFromPdf(string pdfFilePath)
 
             foreach (string line in lines)
             {
-                var match = Regex.Match(line, @"^(?<Name>.+?)\s*(?<Quantity>\d+)\s+(?<Price>\d+(\.\d{1,2})?)$");
+                var match = Regex.Match(line, @"^(?:(?<Quantity>\d+)\s+(?<Name>.+?)|(?<Name>.+?)\s+(?<Quantity>\d+))\s+€?\s*(?<Price>\d+(\.\d{1,2})?)$");
 
                 if (match.Success)
                 {
