@@ -3,6 +3,8 @@ using PdfToInp;
 using iTextSharp.text.pdf;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Xml.Linq;
+using System.Xml;
 
 bool exitRequested = false;
 
@@ -16,7 +18,7 @@ Console.WriteLine("\nJu lutem mbani te hapur kete program qe te ju funksionoj pr
 while (!exitRequested)
 {
     string directoryPath = solutionDirectory;
-    string outputPath = solutionDirectory;
+    string outputPath = System.IO.Path.Combine(solutionDirectory, "FILE_IN");
 
     // Start monitoring the directory
     MonitorDirectory(directoryPath, outputPath);
@@ -37,12 +39,16 @@ static void MonitorDirectory(string directoryPath, string outputPath)
         try
         {
             // Process the PDF file and extract order items
-            (List<OrderItem> orderItems, int pages) = ExtractOrderItemsFromPdf(pdfFile);
+            (List<OrderItem> orderItems, int pages, int orderNr) = ExtractOrderItemsFromPdf(pdfFile);
 
             string fileName = System.IO.Path.GetFileNameWithoutExtension(pdfFile);
             string uniqueFileName = $"{fileName}_{Guid.NewGuid()}.inp";
             string inpFilePath = System.IO.Path.Combine(outputPath, uniqueFileName);
-            SaveOrderItemsToFile(inpFilePath, orderItems, itemIdManager);
+            //SaveOrderItemsToFile(inpFilePath, orderItems, itemIdManager);
+
+            string xmlFileName = $"{fileName}_{Guid.NewGuid()}.xml";
+            string xmlFilePath = System.IO.Path.Combine(outputPath, xmlFileName);
+            BuildOrderXml(orderItems, orderNr, xmlFilePath);
 
             // Delete the original PDF file after processing
             File.Delete(pdfFile);
@@ -62,17 +68,18 @@ static void MonitorDirectory(string directoryPath, string outputPath)
 
 
 // Method to extract order items from a PDF file
-static (List<OrderItem>, int) ExtractOrderItemsFromPdf(string pdfFilePath)
+static (List<OrderItem>, int, int) ExtractOrderItemsFromPdf(string pdfFilePath)
 {
     List<OrderItem> orderItems = new List<OrderItem>();
     var numberOfPages = 0;
+    int operNum = 1; // Default value
     using (PdfReader reader = new PdfReader(pdfFilePath))
     {
         StringWriter output = new StringWriter();
         if (reader.NumberOfPages > 10)
         {
             numberOfPages = reader.NumberOfPages;
-            return (new(), reader.NumberOfPages);
+            return (new(), reader.NumberOfPages, 0);
         }
 
 
@@ -83,7 +90,13 @@ static (List<OrderItem>, int) ExtractOrderItemsFromPdf(string pdfFilePath)
 
             foreach (string line in lines)
             {
-                var match = Regex.Match(line, @"^(?:(?<Quantity>\d+)\s+(?<Name>.+?)|(?<Name>.+?)\s+(?<Quantity>\d+))\s+€?\s*(?<Price>\d+(\.\d{1,2})?)$");
+                var operMatch = Regex.Match(line, @"#(?<OperNum>\d+)");
+                if (operMatch.Success && int.TryParse(operMatch.Groups["OperNum"].Value, out int parsedOperNum))
+                {
+                    operNum = parsedOperNum;
+                }
+
+                var match = Regex.Match(line, @"^(?<Name>.+?)\s+(?<Quantity>\d+)\s+€?\s*(?<Price>\d+(\.\d{1,2})?)$");
 
                 if (match.Success)
                 {
@@ -102,7 +115,7 @@ static (List<OrderItem>, int) ExtractOrderItemsFromPdf(string pdfFilePath)
         }
     }
 
-    return (orderItems, numberOfPages);
+    return (orderItems, numberOfPages, operNum);
 }
 
 // Method to save order items to a file
@@ -130,5 +143,73 @@ static void SaveOrderItemsToFile(string filePath, List<OrderItem> orderItems, It
 
         // Write the content to the file
         File.WriteAllText(filePath, content.ToString());
+    }
+}
+static void BuildOrderXml(List<OrderItem> orderItems, int orderNr, string filePath)
+{
+    var commands = new List<XElement>();
+
+    // OpenReceipt command
+    commands.Add(
+        new XElement("Command", new XAttribute("Name", "OpenReceipt"),
+            new XElement("Args",
+                new XElement("Arg", new XAttribute("Name", "OperNum"), new XAttribute("Value", orderNr)),
+                new XElement("Arg", new XAttribute("Name", "OperPass"), new XAttribute("Value", "0")),
+                new XElement("Arg", new XAttribute("Name", "OptionPrintType"), new XAttribute("Value", "0"))
+            )
+        )
+    );
+
+    // Order items
+    foreach (var item in orderItems)
+    {
+        commands.Add(
+            new XElement("Command", new XAttribute("Name", "SellPLUwithSpecifiedVAT"),
+                new XElement("Args",
+                    new XElement("Arg", new XAttribute("Name", "NamePLU"), new XAttribute("Value", item.Name)),
+                    new XElement("Arg", new XAttribute("Name", "OptionVATClass"), new XAttribute("Value", "C")),
+                    new XElement("Arg", new XAttribute("Name", "Price"), new XAttribute("Value", item.Price)),
+                    new XElement("Arg", new XAttribute("Name", "Quantity"), new XAttribute("Value", item.Quantity)),
+                    new XElement("Arg", new XAttribute("Name", "DiscAddP"), new XAttribute("Value", "-0")),
+                    new XElement("Arg", new XAttribute("Name", "DiscAddV"), new XAttribute("Value", "0")),
+                    new XElement("Arg", new XAttribute("Name", "DepNum"), new XAttribute("Value", "0"))
+                )
+            )
+        );
+    }
+
+    // Subtotal
+    commands.Add(
+        new XElement("Command", new XAttribute("Name", "Subtotal"),
+            new XElement("Args",
+                new XElement("Arg", new XAttribute("Name", "OptionPrinting"), new XAttribute("Value", "1")),
+                new XElement("Arg", new XAttribute("Name", "OptionDisplay"), new XAttribute("Value", "0")),
+                new XElement("Arg", new XAttribute("Name", "DiscAddV"), new XAttribute("Value", "0")),
+                new XElement("Arg", new XAttribute("Name", "DiscAddP"), new XAttribute("Value", "0"))
+            )
+        )
+    );
+
+    // CashPayCloseReceipt
+    commands.Add(new XElement("Command", new XAttribute("Name", "CashPayCloseReceipt")));
+
+    SaveCommandsToXmlFile(commands, filePath);
+}
+
+static void SaveCommandsToXmlFile(List<XElement> commands, string filePath)
+{
+    var settings = new XmlWriterSettings
+    {
+        Indent = true,
+        OmitXmlDeclaration = true,
+        ConformanceLevel = ConformanceLevel.Fragment
+    };
+
+    using (var writer = XmlWriter.Create(filePath, settings))
+    {
+        foreach (var command in commands)
+        {
+            command.WriteTo(writer);
+        }
     }
 }
