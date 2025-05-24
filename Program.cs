@@ -18,7 +18,8 @@ Console.WriteLine("\nJu lutem mbani te hapur kete program qe te ju funksionoj pr
 while (!exitRequested)
 {
     string directoryPath = solutionDirectory;
-    string outputPath = System.IO.Path.Combine(solutionDirectory, "FILE_IN");
+    string outputPath = System.IO.Path.Combine(solutionDirectory);
+    //string outputPath = System.IO.Path.Combine(solutionDirectory, "FILE_IN");
 
     // Start monitoring the directory
     MonitorDirectory(directoryPath, outputPath);
@@ -44,11 +45,11 @@ static void MonitorDirectory(string directoryPath, string outputPath)
             string fileName = System.IO.Path.GetFileNameWithoutExtension(pdfFile);
             string uniqueFileName = $"{fileName}_{Guid.NewGuid()}.inp";
             string inpFilePath = System.IO.Path.Combine(outputPath, uniqueFileName);
-            //SaveOrderItemsToFile(inpFilePath, orderItems, itemIdManager);
+            SaveOrderItemsToFile(inpFilePath, orderItems, itemIdManager);
 
-            string xmlFileName = $"{fileName}_{Guid.NewGuid()}.xml";
-            string xmlFilePath = System.IO.Path.Combine(outputPath, xmlFileName);
-            BuildOrderXml(orderItems, orderNr, xmlFilePath);
+            //string xmlFileName = $"{fileName}_{Guid.NewGuid()}.xml";
+            //string xmlFilePath = System.IO.Path.Combine(outputPath, xmlFileName);
+            //BuildOrderXml(orderItems, orderNr, xmlFilePath);
 
             // Delete the original PDF file after processing
             File.Delete(pdfFile);
@@ -70,6 +71,8 @@ static void MonitorDirectory(string directoryPath, string outputPath)
 // Method to extract order items from a PDF file
 static (List<OrderItem>, int, int) ExtractOrderItemsFromPdf(string pdfFilePath)
 {
+    Regex mainItemRegex = new(@"^(?<Name>.+?)\s+(?<Quantity>\d+)\s+€?\s*(?<Price>\d+(\.\d{1,2})?)$");
+    Regex addOnRegex = new(@"^\+\s*(?<Name>.+?)\s+€?\s*(?<Price>\d+(\.\d{1,2})?)$");
     List<OrderItem> orderItems = new List<OrderItem>();
     var numberOfPages = 0;
     int operNum = 1; // Default value
@@ -87,6 +90,7 @@ static (List<OrderItem>, int, int) ExtractOrderItemsFromPdf(string pdfFilePath)
         {
             string pageText = PdfTextExtractor.GetTextFromPage(reader, i);
             string[] lines = pageText.Split('\n');
+            OrderItem? lastMainItem = null;
 
             foreach (string line in lines)
             {
@@ -96,18 +100,35 @@ static (List<OrderItem>, int, int) ExtractOrderItemsFromPdf(string pdfFilePath)
                     operNum = parsedOperNum;
                 }
 
-                var match = Regex.Match(line, @"^(?<Name>.+?)\s+(?<Quantity>\d+)\s+€?\s*(?<Price>\d+(\.\d{1,2})?)$");
-
-                if (match.Success)
+                var mainMatch = mainItemRegex.Match(line);
+                if (mainMatch.Success)
                 {
-                    string name = match.Groups["Name"].Value.Trim();
-                    int quantity = int.Parse(match.Groups["Quantity"].Value);
-                    decimal price = decimal.Parse(match.Groups["Price"].Value);
+                    string name = mainMatch.Groups["Name"].Value.Trim();
+                    int quantity = int.Parse(mainMatch.Groups["Quantity"].Value);
+                    decimal price = decimal.Parse(mainMatch.Groups["Price"].Value);
 
-                    orderItems.Add(new OrderItem
+                    var item = new OrderItem
                     {
                         Name = name,
                         Quantity = quantity,
+                        Price = price
+                    };
+
+                    orderItems.Add(item);
+                    lastMainItem = item;
+                    continue;
+                }
+
+                var addOnMatch = addOnRegex.Match(line);
+                if (addOnMatch.Success)
+                {
+                    string name = addOnMatch.Groups["Name"].Value.Trim();
+                    decimal price = decimal.Parse(addOnMatch.Groups["Price"].Value);
+
+                    orderItems.Add(new OrderItem
+                    {
+                        Name = $"+ {name}",
+                        Quantity = 1, // Assumed as 1
                         Price = price
                     });
                 }
