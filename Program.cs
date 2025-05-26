@@ -18,8 +18,8 @@ Console.WriteLine("\nJu lutem mbani te hapur kete program qe te ju funksionoj pr
 while (!exitRequested)
 {
     string directoryPath = solutionDirectory;
-    //string outputPath = System.IO.Path.Combine(solutionDirectory);
-    string outputPath = System.IO.Path.Combine(solutionDirectory, "FILE_IN");
+    string outputPath = System.IO.Path.Combine(solutionDirectory);
+    //string outputPath = System.IO.Path.Combine(solutionDirectory, "FILE_IN");
 
     // Start monitoring the directory
     MonitorDirectory(directoryPath, outputPath);
@@ -40,16 +40,16 @@ static void MonitorDirectory(string directoryPath, string outputPath)
         try
         {
             // Process the PDF file and extract order items
-            (List<OrderItem> orderItems, int pages, int orderNr) = ExtractOrderItemsFromPdf(pdfFile);
+            (List<OrderItem> orderItems, int pages) = ExtractOrderItemsFromPdf(pdfFile);
 
             string fileName = System.IO.Path.GetFileNameWithoutExtension(pdfFile);
-            //string uniqueFileName = $"{fileName}_{Guid.NewGuid()}.inp";
-            //string inpFilePath = System.IO.Path.Combine(outputPath, uniqueFileName);
-            //SaveOrderItemsToFile(inpFilePath, orderItems, itemIdManager);
+            string uniqueFileName = $"{fileName}_{Guid.NewGuid()}.inp";
+            string inpFilePath = System.IO.Path.Combine(outputPath, uniqueFileName);
+            SaveOrderItemsToFile(inpFilePath, orderItems, itemIdManager);
 
-            string xmlFileName = $"{fileName}_{Guid.NewGuid()}.xml";
-            string xmlFilePath = System.IO.Path.Combine(outputPath, xmlFileName);
-            BuildOrderXml(orderItems, orderNr, xmlFilePath);
+            //string xmlFileName = $"{fileName}_{Guid.NewGuid()}.xml";
+            //string xmlFilePath = System.IO.Path.Combine(outputPath, xmlFileName);
+            //BuildOrderXml(orderItems, xmlFilePath);
 
             // Delete the original PDF file after processing
             File.Delete(pdfFile);
@@ -69,20 +69,19 @@ static void MonitorDirectory(string directoryPath, string outputPath)
 
 
 // Method to extract order items from a PDF file
-static (List<OrderItem>, int, int) ExtractOrderItemsFromPdf(string pdfFilePath)
+static (List<OrderItem>, int) ExtractOrderItemsFromPdf(string pdfFilePath)
 {
     Regex mainItemRegex = new(@"^(?<Name>.+?)\s+(?<Quantity>\d+)\s+€?\s*(?<Price>\d+(\.\d{1,2})?)$");
     Regex addOnRegex = new(@"^\+\s*(?<Name>.+?)\s+€?\s*(?<Price>\d+(\.\d{1,2})?)$");
     List<OrderItem> orderItems = new List<OrderItem>();
     var numberOfPages = 0;
-    int operNum = 1; // Default value
     using (PdfReader reader = new PdfReader(pdfFilePath))
     {
         StringWriter output = new StringWriter();
         if (reader.NumberOfPages > 10)
         {
             numberOfPages = reader.NumberOfPages;
-            return (new(), reader.NumberOfPages, 0);
+            return (new(), reader.NumberOfPages);
         }
 
 
@@ -94,12 +93,6 @@ static (List<OrderItem>, int, int) ExtractOrderItemsFromPdf(string pdfFilePath)
 
             foreach (string line in lines)
             {
-                var operMatch = Regex.Match(line, @"#(?<OperNum>\d+)");
-                if (operMatch.Success && int.TryParse(operMatch.Groups["OperNum"].Value, out int parsedOperNum))
-                {
-                    operNum = parsedOperNum;
-                }
-
                 var mainMatch = mainItemRegex.Match(line);
                 if (mainMatch.Success)
                 {
@@ -122,12 +115,12 @@ static (List<OrderItem>, int, int) ExtractOrderItemsFromPdf(string pdfFilePath)
                 var addOnMatch = addOnRegex.Match(line);
                 if (addOnMatch.Success)
                 {
-                    string name = addOnMatch.Groups["Name"].Value.Trim();
+                    string name = addOnMatch.Groups["Name"].Value.Replace("+", "").Trim();
                     decimal price = decimal.Parse(addOnMatch.Groups["Price"].Value);
 
                     orderItems.Add(new OrderItem
                     {
-                        Name = $"+ {name}",
+                        Name = name,
                         Quantity = 1, // Assumed as 1
                         Price = price
                     });
@@ -136,7 +129,7 @@ static (List<OrderItem>, int, int) ExtractOrderItemsFromPdf(string pdfFilePath)
         }
     }
 
-    return (orderItems, numberOfPages, operNum);
+    return (orderItems, numberOfPages);
 }
 
 // Method to save order items to a file
@@ -166,7 +159,7 @@ static void SaveOrderItemsToFile(string filePath, List<OrderItem> orderItems, It
         File.WriteAllText(filePath, content.ToString());
     }
 }
-static void BuildOrderXml(List<OrderItem> orderItems, int orderNr, string filePath)
+static void BuildOrderXml(List<OrderItem> orderItems, string filePath)
 {
     var commands = new List<XElement>();
 
@@ -174,9 +167,9 @@ static void BuildOrderXml(List<OrderItem> orderItems, int orderNr, string filePa
     commands.Add(
         new XElement("Command", new XAttribute("Name", "OpenReceipt"),
             new XElement("Args",
-                new XElement("Arg", new XAttribute("Name", "OperNum"), new XAttribute("Value", orderNr)),
+                new XElement("Arg", new XAttribute("Name", "OperNum"), new XAttribute("Value", "1")),
                 new XElement("Arg", new XAttribute("Name", "OperPass"), new XAttribute("Value", "0")),
-                new XElement("Arg", new XAttribute("Name", "OptionPrintType"), new XAttribute("Value", "0"))
+                new XElement("Arg", new XAttribute("Name", "OptionPrintType"), new XAttribute("Value", ""))
             )
         )
     );
