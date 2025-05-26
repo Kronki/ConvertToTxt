@@ -96,7 +96,7 @@ static (List<OrderItem>, int) ExtractOrderItemsFromPdf(string pdfFilePath)
                 var mainMatch = mainItemRegex.Match(line);
                 if (mainMatch.Success)
                 {
-                    string name = mainMatch.Groups["Name"].Value.Trim();
+                    string name = mainMatch.Groups["Name"].Value.Replace("+", "").Trim();
                     int quantity = int.Parse(mainMatch.Groups["Quantity"].Value);
                     decimal price = decimal.Parse(mainMatch.Groups["Price"].Value);
 
