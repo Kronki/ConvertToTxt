@@ -177,12 +177,13 @@ static void BuildOrderXml(List<OrderItem> orderItems, string filePath)
     // Order items
     foreach (var item in orderItems)
     {
+        var priceDivided = item.Price / item.Quantity;
         commands.Add(
             new XElement("Command", new XAttribute("Name", "SellPLUwithSpecifiedVAT"),
                 new XElement("Args",
                     new XElement("Arg", new XAttribute("Name", "NamePLU"), new XAttribute("Value", item.Name)),
                     new XElement("Arg", new XAttribute("Name", "OptionVATClass"), new XAttribute("Value", "C")),
-                    new XElement("Arg", new XAttribute("Name", "Price"), new XAttribute("Value", item.Price)),
+                    new XElement("Arg", new XAttribute("Name", "Price"), new XAttribute("Value", priceDivided)),
                     new XElement("Arg", new XAttribute("Name", "Quantity"), new XAttribute("Value", item.Quantity)),
                     new XElement("Arg", new XAttribute("Name", "DiscAddP"), new XAttribute("Value", "-0")),
                     new XElement("Arg", new XAttribute("Name", "DiscAddV"), new XAttribute("Value", "0")),
