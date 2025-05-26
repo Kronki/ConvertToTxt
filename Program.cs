@@ -11,6 +11,8 @@ bool exitRequested = false;
 // Get the directory of the .sln file (assuming the .sln is in the current working directory)
 string solutionDirectory = AppContext.BaseDirectory;
 
+GetCOMText(solutionDirectory);
+
 // Call the function to print
 Console.WriteLine("HOXXES permes keti aplikacioni ju mundeson printimin e kuponave fiscal");
 Console.WriteLine("\nJu lutem mbani te hapur kete program qe te ju funksionoj printimi i kuponave fiskal!");
@@ -161,18 +163,17 @@ static void SaveOrderItemsToFile(string filePath, List<OrderItem> orderItems, It
 }
 static void BuildOrderXml(List<OrderItem> orderItems, string filePath)
 {
-    var commands = new List<XElement>();
-
-    // OpenReceipt command
-    commands.Add(
+    var commands = new List<XElement>
+    {
+        // OpenReceipt command
         new XElement("Command", new XAttribute("Name", "OpenReceipt"),
             new XElement("Args",
                 new XElement("Arg", new XAttribute("Name", "OperNum"), new XAttribute("Value", "1")),
                 new XElement("Arg", new XAttribute("Name", "OperPass"), new XAttribute("Value", "0")),
-                new XElement("Arg", new XAttribute("Name", "OptionPrintType"), new XAttribute("Value", "1"))
+                new XElement("Arg", new XAttribute("Name", "OptionPrintType"), new XAttribute("Value", "2"))
             )
         )
-    );
+    };
 
     // Order items
     foreach (var item in orderItems)
@@ -182,7 +183,7 @@ static void BuildOrderXml(List<OrderItem> orderItems, string filePath)
             new XElement("Command", new XAttribute("Name", "SellPLUwithSpecifiedVAT"),
                 new XElement("Args",
                     new XElement("Arg", new XAttribute("Name", "NamePLU"), new XAttribute("Value", item.Name)),
-                    new XElement("Arg", new XAttribute("Name", "OptionVATClass"), new XAttribute("Value", "C")),
+                    new XElement("Arg", new XAttribute("Name", "OptionVATClass"), new XAttribute("Value", "E")),
                     new XElement("Arg", new XAttribute("Name", "Price"), new XAttribute("Value", priceDivided)),
                     new XElement("Arg", new XAttribute("Name", "Quantity"), new XAttribute("Value", item.Quantity)),
                     new XElement("Arg", new XAttribute("Name", "DiscAddP"), new XAttribute("Value", "-0")),
@@ -226,5 +227,29 @@ static void SaveCommandsToXmlFile(List<XElement> commands, string filePath)
         {
             command.WriteTo(writer);
         }
+    }
+}
+
+static void GetCOMText(string directoryPath)
+{
+    try
+    {
+        var comFilePath = System.IO.Path.Combine(directoryPath, "COMText.txt");
+        var comFileText = File.ReadAllText(comFilePath).Trim();
+        var filePath = System.IO.Path.Combine(directoryPath, "FILE_IN", "_settings().xml");
+        var commands = new List<XElement>
+        {
+            new XElement("Command", new XAttribute("Name", "settings"),
+                new XElement("Args",
+                    new XElement("Arg", new XAttribute("Name", "com"), new XAttribute("Value", comFileText)),
+                    new XElement("Arg", new XAttribute("Name", "baud"), new XAttribute("Value", "115200"))
+                )
+            )
+        };
+        SaveCommandsToXmlFile(commands, filePath);
+    }
+    catch(Exception)
+    {
+
     }
 }
