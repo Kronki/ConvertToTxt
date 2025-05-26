@@ -169,7 +169,7 @@ static void BuildOrderXml(List<OrderItem> orderItems, string filePath)
             new XElement("Args",
                 new XElement("Arg", new XAttribute("Name", "OperNum"), new XAttribute("Value", "1")),
                 new XElement("Arg", new XAttribute("Name", "OperPass"), new XAttribute("Value", "0")),
-                new XElement("Arg", new XAttribute("Name", "OptionPrintType"), new XAttribute("Value", ""))
+                new XElement("Arg", new XAttribute("Name", "OptionPrintType"), new XAttribute("Value", "1"))
             )
         )
     );
