@@ -18,8 +18,8 @@ Console.WriteLine("\nJu lutem mbani te hapur kete program qe te ju funksionoj pr
 while (!exitRequested)
 {
     string directoryPath = solutionDirectory;
-    string outputPath = System.IO.Path.Combine(solutionDirectory);
-    //string outputPath = System.IO.Path.Combine(solutionDirectory, "FILE_IN");
+    //string outputPath = System.IO.Path.Combine(solutionDirectory);
+    string outputPath = System.IO.Path.Combine(solutionDirectory, "FILE_IN");
 
     // Start monitoring the directory
     MonitorDirectory(directoryPath, outputPath);
@@ -43,13 +43,13 @@ static void MonitorDirectory(string directoryPath, string outputPath)
             (List<OrderItem> orderItems, int pages) = ExtractOrderItemsFromPdf(pdfFile);
 
             string fileName = System.IO.Path.GetFileNameWithoutExtension(pdfFile);
-            string uniqueFileName = $"{fileName}_{Guid.NewGuid()}.inp";
-            string inpFilePath = System.IO.Path.Combine(outputPath, uniqueFileName);
-            SaveOrderItemsToFile(inpFilePath, orderItems, itemIdManager);
+            //string uniqueFileName = $"{fileName}_{Guid.NewGuid()}.inp";
+            //string inpFilePath = System.IO.Path.Combine(outputPath, uniqueFileName);
+            //SaveOrderItemsToFile(inpFilePath, orderItems, itemIdManager);
 
-            //string xmlFileName = $"{fileName}_{Guid.NewGuid()}.xml";
-            //string xmlFilePath = System.IO.Path.Combine(outputPath, xmlFileName);
-            //BuildOrderXml(orderItems, xmlFilePath);
+            string xmlFileName = $"{fileName}_{Guid.NewGuid()}.xml";
+            string xmlFilePath = System.IO.Path.Combine(outputPath, xmlFileName);
+            BuildOrderXml(orderItems, xmlFilePath);
 
             // Delete the original PDF file after processing
             File.Delete(pdfFile);
@@ -96,7 +96,7 @@ static (List<OrderItem>, int) ExtractOrderItemsFromPdf(string pdfFilePath)
                 var mainMatch = mainItemRegex.Match(line);
                 if (mainMatch.Success)
                 {
-                    string name = mainMatch.Groups["Name"].Value.Trim();
+                    string name = mainMatch.Groups["Name"].Value.Replace("+", "").Trim();
                     int quantity = int.Parse(mainMatch.Groups["Quantity"].Value);
                     decimal price = decimal.Parse(mainMatch.Groups["Price"].Value);
 
