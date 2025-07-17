@@ -103,7 +103,7 @@ static (List<OrderItem>, int) ExtractOrderItemsFromPdf(string pdfFilePath)
                     decimal price = decimal.Parse(mainMatch.Groups["Price"].Value);
 
                     // Special case: Akullore (skip adding it directly, store context instead)
-                    if (name.ToLower().Contains("akullore"))
+                    if (name.ToLower().Contains("akullore") && name.Length == 8)
                     {
                         mainItemContext = name;
                         continue; // skip adding Akullore
