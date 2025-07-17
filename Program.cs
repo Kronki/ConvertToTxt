@@ -93,6 +93,9 @@ static (List<OrderItem>, int) ExtractOrderItemsFromPdf(string pdfFilePath)
             string[] lines = pageText.Split('\n');
             OrderItem? lastMainItem = null;
 
+
+            string? mainItemContext = null; // Store main item like "Akullore" to prefix add-ons
+
             foreach (string line in lines)
             {
                 var mainMatch = mainItemRegex.Match(line);
@@ -102,16 +105,26 @@ static (List<OrderItem>, int) ExtractOrderItemsFromPdf(string pdfFilePath)
                     int quantity = int.Parse(mainMatch.Groups["Quantity"].Value);
                     decimal price = decimal.Parse(mainMatch.Groups["Price"].Value);
 
-                    var item = new OrderItem
+                    // Special case: Akullore (skip adding it directly, store context instead)
+                    if (name.ToLower().Contains("akullore") && name.Length == 8)
                     {
-                        Name = name,
-                        Quantity = quantity,
-                        Price = price
-                    };
+                        mainItemContext = name;
+                        continue; // skip adding Akullore
+                    }
+                    else
+                    {
+                        var item = new OrderItem
+                        {
+                            Name = name,
+                            Quantity = quantity,
+                            Price = price
+                        };
 
-                    orderItems.Add(item);
-                    lastMainItem = item;
-                    continue;
+                        orderItems.Add(item);
+                        lastMainItem = item;
+                        mainItemContext = null; // reset context
+                        continue;
+                    }
                 }
 
                 var addOnMatch = addOnRegex.Match(line);
@@ -120,9 +133,12 @@ static (List<OrderItem>, int) ExtractOrderItemsFromPdf(string pdfFilePath)
                     string name = addOnMatch.Groups["Name"].Value.Replace("+", "").Trim();
                     decimal price = decimal.Parse(addOnMatch.Groups["Price"].Value);
 
+                    // If context exists, prepend it to add-on name
+                    string fullName = mainItemContext != null ? $"{mainItemContext} {name}" : name;
+
                     orderItems.Add(new OrderItem
                     {
-                        Name = name,
+                        Name = fullName,
                         Quantity = 1, // Assumed as 1
                         Price = price
                     });
