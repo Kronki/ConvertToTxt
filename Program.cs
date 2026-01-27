@@ -73,8 +73,8 @@ static void MonitorDirectory(string directoryPath, string outputPath)
 // Method to extract order items from a PDF file
 static (List<OrderItem>, int) ExtractOrderItemsFromPdf(string pdfFilePath)
 {
-    Regex mainItemRegex = new(@"^(?<Name>.+?)\s+(?<Quantity>\d+)\s+€?\s*(?<Price>\d+(\.\d{1,2})?)$");
-    Regex addOnRegex = new(@"^\+\s*(?<Name>.+?)\s+€?\s*(?<Price>\d+(\.\d{1,2})?)$");
+    Regex mainItemRegex = new(@"^(?<Name>.+?)\s+(?<Quantity>\d+)\s+€?\s*(?<Price>\d{1,3}(,\d{3})*(\.\d{1,2})?)$");
+    Regex addOnRegex = new(@"^\+\s*(?<Name>.+?)\s+€?\s*(?<Price>\d{1,3}(,\d{3})*(\.\d{1,2})?)$");
     List<OrderItem> orderItems = new List<OrderItem>();
     var numberOfPages = 0;
     using (PdfReader reader = new PdfReader(pdfFilePath))
