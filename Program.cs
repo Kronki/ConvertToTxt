@@ -42,11 +42,15 @@ static void MonitorDirectory(string directoryPath, string outputPath)
             // Process the PDF file and extract order items
             (List<OrderItem> orderItems, int pages) = ExtractOrderItemsFromPdf(pdfFile);
 
-            string fileName = System.IO.Path.GetFileNameWithoutExtension(pdfFile);
-            string uniqueFileName = $"{fileName}_{Guid.NewGuid()}.inp";
-            string inpFilePath = System.IO.Path.Combine(outputPath, uniqueFileName);
-            SaveOrderItemsToFile(inpFilePath, orderItems, itemIdManager);
+            var newGuid = Guid.NewGuid();
 
+            string fileName = System.IO.Path.GetFileNameWithoutExtension(pdfFile);
+            string uniqueFileName = $"{fileName}_{newGuid}.inp";
+            string uniqueBillCopyName = $"Bill_Copy_{newGuid}.inp";
+            string inpFilePath = System.IO.Path.Combine(outputPath, uniqueFileName);
+            string inpFilePathCopy = System.IO.Path.Combine(outputPath, uniqueBillCopyName);
+            SaveOrderItemsToFile(inpFilePath, orderItems, itemIdManager);
+            SaveBillCopy(inpFilePathCopy);
             //string xmlFileName = $"{fileName}_{Guid.NewGuid()}.xml";
             //string xmlFilePath = System.IO.Path.Combine(outputPath, xmlFileName);
             //BuildOrderXml(orderItems, xmlFilePath);
@@ -173,4 +177,11 @@ static void SaveOrderItemsToFile(string filePath, List<OrderItem> orderItems, It
         // Write the content to the file
         File.WriteAllText(filePath, content.ToString());
     }
+}
+
+static void SaveBillCopy(string filePath)
+{
+    var content = new StringBuilder();
+    content.AppendLine("V,1,______,_,__;m1");
+    File.WriteAllText(filePath, content.ToString() );
 }
