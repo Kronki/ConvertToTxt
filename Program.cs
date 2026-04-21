@@ -161,7 +161,8 @@ static void SaveOrderItemsToFile(string filePath, List<OrderItem> orderItems, It
     var content = new StringBuilder();
     foreach (var item in orderItems)
     {
-        var itemId = itemIdManager.GetId(item.Name);
+        decimal unitPrice = Math.Round(item.Price / item.Quantity, 2);
+        var itemId = itemIdManager.GetId(item.Name, unitPrice);
         var priceDivided = item.Price / item.Quantity;
         var price = Convert.ToDouble(String.Format("{0:0.00}", priceDivided));
         content.AppendLine($"S,1,______,_,__;{item.Name};{price};{item.Quantity};1;1;5;0;{itemId};0;0;");
