@@ -165,7 +165,8 @@ static void SaveOrderItemsToFile(string filePath, List<OrderItem> orderItems, It
         var itemId = itemIdManager.GetId(item.Name, unitPrice);
         var priceDivided = item.Price / item.Quantity;
         var price = Convert.ToDouble(String.Format("{0:0.00}", priceDivided));
-        content.AppendLine($"S,1,______,_,__;{item.Name};{price};{item.Quantity};1;1;5;0;{itemId};0;0;");
+        int taxCode = item.Name.Contains("(Tvsh 8%)", StringComparison.OrdinalIgnoreCase) ? 4 : 5;
+        content.AppendLine($"S,1,______,_,__;{item.Name};{price};{item.Quantity};1;1;{taxCode};0;{itemId};0;0;");
     }
     if (orderItems.Count > 0)
     {
